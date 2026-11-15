@@ -2,20 +2,20 @@ name: Deals to Telegram
 
 on:
   schedule:
-    - cron: "*/5 * * * *"   # every 5 minutes (GitHub's minimum)
-  workflow_dispatch:         # lets you start it manually from the Actions tab
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
 
 permissions:
-  contents: write            # needed to save seen_deals.json back to the repo
+  contents: write
 
 concurrency:
   group: deals-bot
-  cancel-in-progress: false  # never overlap runs
+  cancel-in-progress: false
 
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 7
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
 
@@ -24,12 +24,10 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install requests beautifulsoup4
+        run: pip install requests beautifulsoup4 playwright
 
-      # Uncomment these 2 lines AND set USE_BROWSER to "true" below
-      # if the site blocks plain requests:
-      # - name: Install browser
-      #   run: pip install playwright && playwright install --with-deps chromium
+      - name: Install browser
+        run: playwright install --with-deps chromium
 
       - name: Run bot (~5 minutes, checks every minute)
         env:
@@ -38,7 +36,7 @@ jobs:
           RUN_MINUTES: "4.5"
           CHECK_EVERY_SECONDS: "60"
           ELECTRONICS_ONLY: "false"
-          USE_BROWSER: "false"
+          USE_BROWSER: "true"
         run: python deals_to_telegram.py
 
       - name: Save seen deals
