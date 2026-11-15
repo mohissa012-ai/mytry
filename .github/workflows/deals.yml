@@ -1,0 +1,55 @@
+name: Deals to Telegram
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # every 5 minutes (GitHub's minimum)
+  workflow_dispatch:         # lets you start it manually from the Actions tab
+
+permissions:
+  contents: write            # needed to save seen_deals.json back to the repo
+
+concurrency:
+  group: deals-bot
+  cancel-in-progress: false  # never overlap runs
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
+
+      # Uncomment these 2 lines AND set USE_BROWSER to "true" below
+      # if the site blocks plain requests:
+      # - name: Install browser
+      #   run: pip install playwright && playwright install --with-deps chromium
+
+      - name: Run bot (~5 minutes, checks every minute)
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RUN_MINUTES: "4.5"
+          CHECK_EVERY_SECONDS: "60"
+          ELECTRONICS_ONLY: "false"
+          USE_BROWSER: "false"
+        run: python deals_to_telegram.py
+
+      - name: Save seen deals
+        if: always()
+        run: |
+          git config user.name "deals-bot"
+          git config user.email "deals-bot@users.noreply.github.com"
+          git add seen_deals.json || true
+          if ! git diff --cached --quiet; then
+            git commit -m "update seen deals"
+            git pull --rebase
+            git push
+          fi
