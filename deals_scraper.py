@@ -111,16 +111,38 @@ def fetch_with_camoufox() -> str:
         page.wait_for_timeout(5000)
 
         if _looks_like_challenge(page):
+            # Save evidence so it can be downloaded from the GitHub Actions run.
+            diagnostics_dir = Path("diagnostics")
+            diagnostics_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                page.screenshot(
+                    path=str(diagnostics_dir / "cloudflare-challenge.png"),
+                    full_page=True,
+                )
+            except Exception as screenshot_error:
+                print(f"Could not save challenge screenshot: {screenshot_error}", flush=True)
+            try:
+                (diagnostics_dir / "challenge-page.html").write_text(
+                    page.content(), encoding="utf-8"
+                )
+            except Exception as html_error:
+                print(f"Could not save challenge HTML: {html_error}", flush=True)
+
+            print(
+                f"Navigation response status: {response.status if response else 'unknown'}",
+                flush=True,
+            )
+            print(f"Browser page title: {page.title()}", flush=True)
+            print(f"Challenge evidence saved under: {diagnostics_dir.resolve()}", flush=True)
+
             if CAMOUFOX_HEADLESS or MANUAL_CHALLENGE_WAIT == 0:
                 raise RuntimeError(
                     "The site is showing a browser verification page. "
-                    "Try a visible local run with CAMOUFOX_HEADLESS=false and "
-                    "complete the check manually if you are authorized."
+                    "Diagnostic screenshot and HTML were saved under diagnostics/."
                 )
 
             print(
-                f"Verification page detected. If a check is visible, complete it "
-                f"in the browser. Waiting up to {MANUAL_CHALLENGE_WAIT}s...",
+                f"Verification page detected. Waiting up to {MANUAL_CHALLENGE_WAIT}s...",
                 flush=True,
             )
             deadline = time.monotonic() + MANUAL_CHALLENGE_WAIT
