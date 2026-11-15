@@ -140,7 +140,12 @@ def check_once() -> None:
     seen = load_seen()
     seen_set = set(seen)
 
-    deals = parse_deals(fetch_page())
+    page_html = fetch_page()
+    dbg = BeautifulSoup(page_html, "html.parser")
+    print("DEBUG title:", dbg.title.get_text(strip=True) if dbg.title else None, flush=True)
+    print("DEBUG html size:", len(page_html), "links:", len(dbg.find_all("a", href=True)), flush=True)
+    print("DEBUG text:", dbg.get_text(" ", strip=True)[:500], flush=True)
+    deals = parse_deals(page_html)
     if ELECTRONICS_ONLY:
         deals = [d for d in deals if is_electronic(d)]
 
